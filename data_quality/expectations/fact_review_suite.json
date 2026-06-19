@@ -1,0 +1,61 @@
+{
+  "name": "fact_review_suite",
+  "id": "7ad57a3f-261d-4238-a0bf-755251c80d22",
+  "expectations": [
+    {
+      "type": "expect_table_row_count_to_equal",
+      "kwargs": {
+        "value": 215063
+      },
+      "meta": {},
+      "id": "a2209f3f-65e5-4d19-a4b6-abd9d0a5e9d2",
+      "severity": "critical"
+    },
+    {
+      "type": "expect_column_proportion_of_non_null_values_to_be_between",
+      "kwargs": {
+        "column": "drug_sk",
+        "min_value": 0.65,
+        "max_value": 1.0
+      },
+      "meta": {},
+      "id": "327a7ac7-9d4c-471f-b70d-026b5ea68739",
+      "severity": "critical"
+    },
+    {
+      "type": "expect_column_proportion_of_non_null_values_to_be_between",
+      "kwargs": {
+        "column": "condition_sk",
+        "min_value": 0.9,
+        "max_value": 1.0
+      },
+      "meta": {},
+      "id": "aca5fa20-ca47-46f8-b246-cec1949ce89d",
+      "severity": "critical"
+    },
+    {
+      "type": "expect_column_values_to_be_between",
+      "kwargs": {
+        "column": "rating",
+        "min_value": 1.0,
+        "max_value": 10.0
+      },
+      "meta": {},
+      "id": "e89e8901-671a-4959-bff8-7925a7dca5c2",
+      "severity": "critical"
+    },
+    {
+      "type": "expect_column_values_to_not_be_null",
+      "kwargs": {
+        "column": "dq_flag"
+      },
+      "meta": {},
+      "id": "c518c219-9d76-4999-96ee-05f14f9199dc",
+      "severity": "critical"
+    }
+  ],
+  "meta": {
+    "great_expectations_version": "1.18.1"
+  },
+  "notes": null
+}

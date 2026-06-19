@@ -1,0 +1,51 @@
+# =============================================================================
+# requirements-mwaa.txt  —  AWS MWAA deployment requirements (ADR-005 Condition P5)
+# =============================================================================
+# Target environment : AWS MWAA, Apache Airflow 2.10.3 / Python 3.11
+# SEPARATE BY DESIGN  : this file is NOT the dev requirements
+#                       (requirements/requirements.txt drives the local .venv,
+#                       which currently runs Airflow 3.x / py3.12 — the WRONG
+#                       target for MWAA). Do not merge the two.
+#
+# MWAA pattern (per AWS docs):
+#   * MWAA manages the Airflow CORE itself — we MUST NOT list/override
+#     `apache-airflow`. The --constraint line below pins everything that ships
+#     in the constraints set (providers, duckdb, requests, etc.) to the exact
+#     versions Airflow 2.10.3 was tested against, preventing dependency drift
+#     that can fail the MWAA environment on deploy.
+#   * Only project EXTRAS that are NOT part of the Airflow constraints set
+#     (dbt-*, great-expectations, kaggle) are pinned explicitly below.
+#
+# Constraints file (Airflow 2.10.3, py3.11):
+--constraint "https://raw.githubusercontent.com/apache/airflow/constraints-2.10.3/constraints-3.11.txt"
+
+# -----------------------------------------------------------------------------
+# Airflow providers — version RESOLVED by the --constraint line above:
+#   apache-airflow-providers-amazon    == 9.0.0   (constraints-2.10.3/3.11)
+#   apache-airflow-providers-snowflake == 5.8.0   (constraints-2.10.3/3.11)
+# Listed here (unpinned) so MWAA installs them; the constraint pins the version.
+# -----------------------------------------------------------------------------
+apache-airflow-providers-amazon
+apache-airflow-providers-snowflake
+
+# -----------------------------------------------------------------------------
+# Data sources — requests is in the constraints set (==2.32.3); kaggle is not.
+# -----------------------------------------------------------------------------
+requests
+kaggle==1.6.17
+
+# -----------------------------------------------------------------------------
+# Transform / warehouse
+#   duckdb is pinned by the constraints set (==1.1.3).
+#   dbt-* are NOT in the Airflow constraints set -> pin explicitly.
+#   1.8.x is the dbt line validated against py3.11 in the 2.10.3 era.
+# -----------------------------------------------------------------------------
+duckdb
+dbt-core==1.8.8
+dbt-duckdb==1.8.4          # local dev target
+dbt-snowflake==1.8.4       # cloud artifact target
+
+# -----------------------------------------------------------------------------
+# Quality — Great Expectations (not in Airflow constraints set -> pin)
+# -----------------------------------------------------------------------------
+great-expectations==0.18.22

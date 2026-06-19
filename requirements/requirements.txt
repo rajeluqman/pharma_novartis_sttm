@@ -1,0 +1,20 @@
+# Python deps for aws-mwaa-local-runner (mirror this in MWAA requirements.txt).
+# Pin exact versions before deploying to MWAA — unpinned reqs can fail the environment.
+# Constraints must match your MWAA Airflow version's constraints file.
+
+# Data sources
+kaggle
+requests
+
+# Transform / warehouse
+dbt-core
+dbt-duckdb           # local dev target
+dbt-snowflake        # cloud artifact target
+duckdb
+
+# Quality
+great-expectations
+
+# Airflow providers (match MWAA-provided versions; do not override core airflow)
+apache-airflow-providers-snowflake
+apache-airflow-providers-amazon

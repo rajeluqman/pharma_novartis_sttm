@@ -1,0 +1,51 @@
+{
+  "name": "dim_drug_suite",
+  "id": "3a6d8768-a447-48ec-8af5-c45cf871de87",
+  "expectations": [
+    {
+      "type": "expect_table_row_count_to_be_between",
+      "kwargs": {
+        "min_value": 133654,
+        "max_value": 200000
+      },
+      "meta": {},
+      "id": "e27ea0f4-acf7-49b2-92e2-544b21557edf",
+      "severity": "critical"
+    },
+    {
+      "type": "expect_column_values_to_not_be_null",
+      "kwargs": {
+        "column": "drug_sk"
+      },
+      "meta": {},
+      "id": "e6215895-8961-40da-9aa9-69f0c5526a1b",
+      "severity": "critical"
+    },
+    {
+      "type": "expect_column_values_to_be_unique",
+      "kwargs": {
+        "column": "drug_sk"
+      },
+      "meta": {},
+      "id": "0eb4e95e-c81f-4757-8390-27daa2a74ff4",
+      "severity": "critical"
+    },
+    {
+      "type": "expect_column_distinct_values_to_be_in_set",
+      "kwargs": {
+        "column": "drug_member_type",
+        "value_set": [
+          "ndc_product",
+          "atc_category"
+        ]
+      },
+      "meta": {},
+      "id": "ab5d9ca0-648a-4740-a55c-6f67d5e70f4a",
+      "severity": "critical"
+    }
+  ],
+  "meta": {
+    "great_expectations_version": "1.18.1"
+  },
+  "notes": null
+}

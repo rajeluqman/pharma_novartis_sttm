@@ -1,0 +1,43 @@
+# Credentials
+.env
+*.env
+.env.*
+!.env.example
+credentials/
+.kaggle/
+.secrets/
+*.key
+*.pem
+
+# Data
+data/
+*.parquet
+*.csv
+*.xlsx
+*.xls
+*.duckdb
+# dbt seeds are version-controlled governance artifacts (ADR-003), not raw data
+!dbt/seeds/*.csv
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# dbt
+target/
+dbt_modules/
+dbt_packages/
+logs/
+
+# Tooling / volatile outputs
+mlruns/
+great_expectations/uncommitted/
+data_quality/validations/
+airflow/logs/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db

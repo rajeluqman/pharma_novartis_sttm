@@ -1,0 +1,51 @@
+{
+  "name": "fact_sales_suite",
+  "id": "bc1681ab-57c5-41da-bc25-05478c26c5ba",
+  "expectations": [
+    {
+      "type": "expect_table_row_count_to_equal",
+      "kwargs": {
+        "value": 16848
+      },
+      "meta": {},
+      "id": "5b62099a-8004-420d-988e-bc52aa616897",
+      "severity": "critical"
+    },
+    {
+      "type": "expect_column_proportion_of_non_null_values_to_be_between",
+      "kwargs": {
+        "column": "drug_sk",
+        "min_value": 1.0,
+        "max_value": 1.0
+      },
+      "meta": {},
+      "id": "94392474-9271-468d-b56a-5ab10bc80946",
+      "severity": "critical"
+    },
+    {
+      "type": "expect_column_proportion_of_non_null_values_to_be_between",
+      "kwargs": {
+        "column": "date_sk",
+        "min_value": 1.0,
+        "max_value": 1.0
+      },
+      "meta": {},
+      "id": "3d696822-0276-49c0-8d4e-0cd57bb6a139",
+      "severity": "critical"
+    },
+    {
+      "type": "expect_column_values_to_be_between",
+      "kwargs": {
+        "column": "units_sold",
+        "min_value": 0.0
+      },
+      "meta": {},
+      "id": "d96afa5b-d727-4baf-a66a-7a593c15523f",
+      "severity": "critical"
+    }
+  ],
+  "meta": {
+    "great_expectations_version": "1.18.1"
+  },
+  "notes": null
+}

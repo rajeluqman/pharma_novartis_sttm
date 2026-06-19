@@ -1,0 +1,8 @@
+version: 2
+
+seeds:
+  - name: atc_pharmclass_crosswalk
+    description: Maintained seed mapping ATC code -> pharm_class hint + example generic (ADR-003), reviewed by Business Analyst.
+    columns:
+      - name: atc_code
+        tests: [not_null, unique]

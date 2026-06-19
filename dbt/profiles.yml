@@ -1,0 +1,35 @@
+# dbt profiles — dev (local DuckDB) vs prod (Snowflake artifact window).
+# DBT_TARGET selects which (see .env.example). Keep secrets in env, not here.
+#
+# ADR-005 Condition C: dev target is now an EPHEMERAL DuckDB catalog (path: ':memory:',
+# no warehouse.duckdb file) — parquet-on-S3 is the only persistent truth. httpfs settings are
+# env-driven (scripts/s3_env.py documents the same contract): MinIO now (S3_ENDPOINT set,
+# path-style, fake local creds), real AWS later (S3_ENDPOINT unset, real creds) — same profile,
+# no edits needed to re-point.
+novartis_pharma:
+  target: "{{ env_var('DBT_TARGET', 'dev') }}"
+  outputs:
+    dev:
+      type: duckdb
+      path: ":memory:"
+      threads: 4
+      extensions:
+        - httpfs
+      settings:
+        s3_region: "{{ env_var('AWS_REGION', env_var('AWS_DEFAULT_REGION', 'ap-southeast-1')) }}"
+        s3_endpoint: "{{ env_var('S3_ENDPOINT', '') }}"
+        s3_use_ssl: "{{ env_var('S3_USE_SSL', 'false') }}"
+        s3_url_style: "{{ env_var('S3_URL_STYLE', 'path') }}"
+        s3_access_key_id: "{{ env_var('AWS_ACCESS_KEY_ID', '') }}"
+        s3_secret_access_key: "{{ env_var('AWS_SECRET_ACCESS_KEY', '') }}"
+      external_root: "s3://{{ env_var('S3_BUCKET', 'novartis-pharma-sttm-lake') }}/silver"
+    prod:
+      type: snowflake
+      account: "{{ env_var('SNOWFLAKE_ACCOUNT') }}"
+      user: "{{ env_var('SNOWFLAKE_USER') }}"
+      password: "{{ env_var('SNOWFLAKE_PASSWORD') }}"
+      role: "{{ env_var('SNOWFLAKE_ROLE') }}"
+      warehouse: "{{ env_var('SNOWFLAKE_WAREHOUSE') }}"
+      database: "{{ env_var('SNOWFLAKE_DATABASE') }}"
+      schema: "{{ env_var('SNOWFLAKE_SCHEMA', 'public') }}"
+      threads: 8

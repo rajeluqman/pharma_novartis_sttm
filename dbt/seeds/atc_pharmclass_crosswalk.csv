@@ -1,0 +1,9 @@
+atc_code,atc_description,pharm_class_hint,example_generic
+M01AB,"Anti-inflammatory/antirheumatic, non-steroid, acetic acid derivatives","Nonsteroidal Anti-inflammatory Drug",diclofenac
+M01AE,"Anti-inflammatory/antirheumatic, non-steroid, propionic acid derivatives","Nonsteroidal Anti-inflammatory Drug",ibuprofen
+N02BA,"Other analgesics and antipyretics, salicylic acid and derivatives","Salicylate",aspirin
+N02BE,"Other analgesics and antipyretics, pyrazolones and anilides","Anilide / Analgesic",paracetamol
+N05B,"Psycholeptics, anxiolytics","Benzodiazepine / Anxiolytic",diazepam
+N05C,"Psycholeptics, hypnotics and sedatives","Sedative-Hypnotic",zolpidem
+R03,"Drugs for obstructive airway diseases","Bronchodilator / Beta2 Agonist",salbutamol
+R06,"Antihistamines for systemic use","Antihistamine",loratadine

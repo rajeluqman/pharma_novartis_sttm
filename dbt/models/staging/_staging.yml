@@ -1,0 +1,55 @@
+version: 2
+
+models:
+  - name: stg_alpha__sales
+    description: Enrich (Silver) — Alpha sales, unpivoted to long (1 row = 1 ATC code x 1 day).
+    columns:
+      - name: sale_date
+        tests: [not_null]
+      - name: atc_code
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['M01AB', 'M01AE', 'N02BA', 'N02BE', 'N05B', 'N05C', 'R03', 'R06']
+      - name: units_sold
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              inclusive: true
+
+  - name: stg_beta__ndc
+    description: Enrich (Silver) — Beta NDC product master, one row per product_ndc.
+    columns:
+      - name: product_ndc
+        tests: [not_null, unique]
+      - name: generic_name
+        tests:
+          # 3/136038 products (OTC sanitizers) ship brand_name only, no generic_name —
+          # legitimate source data, not a pipeline defect. warn, don't block the build.
+          - not_null:
+              config:
+                severity: warn
+
+  - name: stg_gamma__reviews
+    description: Enrich (Silver) — Gamma reviews, free-text drug name normalized for crosswalk match.
+    columns:
+      - name: review_id
+        tests: [not_null, unique]
+      - name: drug_name_raw
+        tests: [not_null]
+      - name: dq_flag
+        description: True when condition_name was nulled for a scrape-artifact defect (see DEBATE_LOG_phase_4.md).
+        tests: [not_null]
+      - name: dq_reason
+        tests:
+          - not_null:
+              config:
+                where: "dq_flag = true"
+      - name: rating
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 1
+              max_value: 10
+              inclusive: true

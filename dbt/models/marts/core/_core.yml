@@ -1,0 +1,104 @@
+version: 2
+
+models:
+  - name: dim_date
+    description: Data Mart (STAR) — conformed dim_date, SCD0. 2008-01-01..2019-12-31.
+    columns:
+      - name: date_sk
+        tests: [not_null, unique]
+      - name: full_date
+        tests: [not_null, unique]
+
+  - name: dim_condition
+    description: Data Mart (STAR) — dim_condition, SCD1, distinct conditions from Gamma reviews.
+    columns:
+      - name: condition_sk
+        tests: [not_null, unique]
+      - name: condition_name
+        tests: [not_null, unique]
+
+  - name: dim_drug
+    description: >
+      Data Mart (STAR) — conformed dim_drug, SCD2. NDC product rows (Beta, via snapshot) +
+      ATC category rows (seed) so fact_sales has a join target Alpha's category grain can use.
+      drug_member_type distinguishes the two — see ADR-003 and DEBATE_LOG_phase_4.md (the
+      Data Architect condition that led to splitting this out of match_confidence).
+    columns:
+      - name: drug_sk
+        tests: [not_null, unique]
+      - name: drug_member_type
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['ndc_product', 'atc_category']
+      - name: match_confidence
+        description: Crosswalk coverage KPI — only meaningful for ndc_product rows; null for atc_category rows by design.
+        tests:
+          - not_null:
+              config:
+                where: "drug_member_type = 'ndc_product'"
+          - accepted_values:
+              values: ['exact', 'normalized', 'fuzzy', 'combination_unverified', 'unmatched']
+              config:
+                where: "drug_member_type = 'ndc_product'"
+      - name: is_combination_product
+        tests: [not_null]
+
+  - name: fact_sales
+    description: >
+      Data Mart (STAR) — fact_sales. Grain: 1 row = 1 ATC category x 1 day.
+      drug_sk always resolves to a dim_drug atc_category member (Alpha has no NDC-level detail).
+    columns:
+      - name: sales_sk
+        tests: [not_null, unique]
+      - name: date_sk
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_date')
+              field: date_sk
+      - name: drug_sk
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_drug')
+              field: drug_sk
+      - name: units_sold
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              inclusive: true
+
+  - name: fact_review
+    description: >
+      Data Mart (STAR) — fact_review. Grain: 1 row = 1 review event.
+      drug_sk/condition_sk may be null — partial-match policy (ADR-003), coverage is a DQD KPI.
+    columns:
+      - name: review_sk
+        tests: [not_null, unique]
+      - name: date_sk
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_date')
+              field: date_sk
+      - name: drug_sk
+        tests:
+          - relationships:
+              to: ref('dim_drug')
+              field: drug_sk
+      - name: condition_sk
+        tests:
+          - relationships:
+              to: ref('dim_condition')
+              field: condition_sk
+      - name: rating
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 1
+              max_value: 10
+              inclusive: true
+      - name: dq_flag
+        tests: [not_null]

@@ -1,0 +1,24 @@
+version: 2
+
+# ADR-005 S3-canonical migration: Bronze is no longer a relational `bronze.*` table loaded by
+# scripts/load_bronze.py into the dev DuckDB file — it's parquet on S3
+# (s3://<bucket>/bronze/<src>/<date>/<table>.parquet, written by the same script via httpfs).
+# dbt's `{{ source(...) }}` relational-table abstraction doesn't fit a read_parquet('s3://...')
+# call (a source still implies a catalog relation dbt can `select * from`), so staging models now
+# call the bronze_parquet(src, table) macro (dbt/macros/s3_paths.sql) directly instead of
+# `{{ source(...) }}`. This file is kept only as a lineage/documentation record of what the bronze
+# layer logically contains — it is NOT referenced by any model anymore.
+sources:
+  - name: alpha
+    schema: bronze
+    tables:
+      - name: sales_daily
+      - name: sales_hourly
+  - name: beta
+    schema: bronze
+    tables:
+      - name: ndc_directory
+  - name: gamma
+    schema: bronze
+    tables:
+      - name: drug_reviews
