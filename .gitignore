@@ -3,6 +3,9 @@
 *.env
 .env.*
 !.env.example
+# gym.env is COMMITTED on purpose (ADR-006-A1 fail-closed contract) — fake local creds only.
+# Must override *.env above so the in-repo gym guard actually ships.
+!gym.env
 credentials/
 .kaggle/
 .secrets/
@@ -37,6 +40,9 @@ great_expectations/uncommitted/
 data_quality/validations/
 airflow/logs/
 *.log
+
+# Incubator sealed answer keys (RUBRICS) — never committed (ADR-006-A1; gym integrity)
+docs/incidents/.solutions/
 
 # OS
 .DS_Store

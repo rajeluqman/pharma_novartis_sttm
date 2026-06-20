@@ -1,0 +1,56 @@
+name: pipeline-ci
+
+# Static, data-free gates for the ELT pipeline. No cloud creds, no data, no warehouse —
+# runs in seconds on the GitHub Actions free tier ($0). Catches code/config regressions
+# before merge so the incidents that reach a real run are data/operational, not code bugs.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches:
+      - 'gym/regression-**'   # opt-in: deliberately run gates on a regression-drill branch
+
+permissions:
+  contents: read
+
+jobs:
+  static-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Syntax compile (scripts + DAGs)
+        run: python -m py_compile $(git ls-files 'scripts/*.py' 'airflow/dags/*.py')
+
+      - name: Lint
+        run: |
+          pip install --quiet ruff
+          ruff check scripts airflow/dags
+
+      - name: Great Expectations suites are valid JSON
+        run: |
+          for f in data_quality/expectations/*.json; do
+            echo "validating $f"
+            python -m json.tool "$f" > /dev/null
+          done
+
+      - name: dbt parse (manifest builds, no connection needed)
+        env:
+          DBT_PROFILES_DIR: ${{ github.workspace }}/dbt
+        run: |
+          pip install --quiet dbt-duckdb
+          cd dbt
+          dbt deps || true
+          dbt parse
+
+      - name: Sealed answer keys must stay untracked (gym integrity)
+        run: |
+          if [ -n "$(git ls-files 'docs/incidents/.solutions/')" ]; then
+            echo "::error::a sealed rubric under docs/incidents/.solutions/ is tracked — remove it"
+            exit 1
+          fi
