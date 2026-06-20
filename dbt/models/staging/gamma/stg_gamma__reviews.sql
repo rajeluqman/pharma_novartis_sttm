@@ -10,7 +10,7 @@
 -- distinguishing "scrubbed for being garbage" from "source genuinely had no condition" (the other
 -- 1,194 null rows, untouched here — that's missing data, not a defect this rule corrects).
 -- ADR-005: reads bronze parquet off S3 directly (bronze_parquet() macro), not a relational source.
-{{ config(materialized='view') }}
+{{ config(materialized='external', location=silver_location('stg_gamma__reviews')) }}
 
 select
     "uniqueID"                                                                 as review_id,

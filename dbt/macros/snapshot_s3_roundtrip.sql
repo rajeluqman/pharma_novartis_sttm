@@ -5,7 +5,11 @@
    inside the SAME ephemeral :memory: DuckDB session for the whole `dbt snapshot` invocation. #}
 
 {% macro load_snap_beta_ndc_from_s3() %}
-  {%- if execute and target.type == 'duckdb' and flags.WHICH in ['snapshot', 'build'] -%}
+  {#- 'run' included (O-AIR-07 rep correction): the orchestrated DAG runs `dbt run -s marts.core`
+      as a separate :memory: subprocess from `dbt snapshot`, so dim_drug's `dbt run` must restore
+      the SCD2 snapshot table from S3 before reading it. 'snapshot'/'build' keep the same-session
+      path working. (export stays snapshot/build-only — a bare run must never overwrite history.) -#}
+  {%- if execute and target.type == 'duckdb' and flags.WHICH in ['snapshot', 'build', 'run'] -%}
     {%- set s3_path = snapshot_location('snap_beta_ndc') -%}
     {%- set glob_path = s3_bucket() ~ '/snapshots/snap_beta_ndc/*.parquet' -%}
     {%- set check_sql -%}

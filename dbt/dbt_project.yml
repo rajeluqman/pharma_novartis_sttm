@@ -17,23 +17,38 @@ vars:
   load_date: "{{ env_var('LAND_DATE', modules.datetime.date.today().strftime('%Y-%m-%d')) }}"
   run_id: "dev"
 
-# ADR-005 Decision 2 documented deviation (see scripts/snapshot_beta_ndc.py docstring +
-# dbt/macros/snapshot_s3_roundtrip.sql): dbt-core's `snapshot` materialization has no
-# `external`/`location` hook, so S3 persistence for snap_beta_ndc's SCD2 history is implemented
-# as on-run-start (load prior state from S3) / on-run-end (export new state to S3) hooks instead.
-# Both macros gate on flags.WHICH in ['snapshot', 'build'] so `dbt run`/`dbt test` alone (without
-# touching the snapshot) are unaffected; `dbt build` is the supported way to run this snapshot
-# under Condition C (must build stg_beta__ndc + snap_beta_ndc in the SAME ephemeral session —
-# see scripts/snapshot_beta_ndc.py for why a bare `dbt snapshot` fails cold).
+# O-AIR-07 (ADR-007 B1, rep-corrected): register_external_upstreams() rebuilds the catalog views
+# for every `external` ANCESTOR (Silver/Gold parquet on S3) of the selected nodes at the START of
+# EVERY invocation — walking THROUGH ephemeral models (the stock dbt-duckdb macro registers only
+# DIRECT upstreams, so it misses stg_beta__ndc, which is external but hidden behind the ephemeral
+# int_drug_crosswalk). Required now that staging is `external` and the orchestrated DAG runs
+# `dbt run -s staging` / `dbt snapshot` / `dbt run -s marts.core` / ... as distinct :memory:
+# subprocesses (ADR-005 Condition C). Without it, the snapshot + marts processes can't see Silver.
+# See dbt/macros/register_external.sql.
+#
+# ADR-005 Decision 2 deviation: dbt-core's `snapshot` materialization has no `external`/`location`
+# hook, so snap_beta_ndc's SCD2 history is persisted to S3 via load (on-run-start) / export
+# (on-run-end) hooks. The rep falsified B1's "snapshot survives task boundaries / no new work"
+# premise: the LOAD gate must also include 'run' so `dbt run -s marts.core` (WHICH='run') restores
+# the snapshot table before dim_drug reads it (the relational snapshot is NOT an external model, so
+# register_upstream_external_models above does not cover it). EXPORT stays ['snapshot','build'] so a
+# bare `dbt run`/`dbt test` never re-writes the SCD2 history.
 on-run-start:
+  - "{{ register_external_upstreams() }}"
+  - "{{ load_seed_from_s3() }}"
   - "{{ load_snap_beta_ndc_from_s3() }}"
 on-run-end:
+  - "{{ export_seed_to_s3() }}"
   - "{{ export_snap_beta_ndc_to_s3() }}"
 
 models:
   novartis_pharma_sttm:
     staging:        # = Enrich (Silver), per-source, divergent — reads bronze/ parquet on S3
-      +materialized: view
+      # external (not view) so Silver persists to s3://.../silver/ and survives the MWAA
+      # per-task :memory: DuckDB subprocess boundary (O-AIR-07 fix; ADR-007 B1). Each model
+      # sets its own location via silver_location(); per-<date> deterministic overwrite
+      # (ADR-005 Condition A). dbt_marts then re-reads silver/ parquet, not a dead view.
+      +materialized: external
       +schema: enrich
     intermediate:   # consolidation step (crosswalk, conforming)
       +materialized: ephemeral

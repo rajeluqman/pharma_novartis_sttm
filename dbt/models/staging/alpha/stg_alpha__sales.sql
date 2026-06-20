@@ -1,7 +1,7 @@
 -- Enrich (Silver) — Project Alpha sales. Divergent source: ATC category columns, wide.
 -- Unpivots the 8 ATC columns -> long (atc_code, units_sold); negative units -> 0 (business rule).
 -- ADR-005: reads bronze parquet off S3 directly (bronze_parquet() macro), not a relational source.
-{{ config(materialized='view') }}
+{{ config(materialized='external', location=silver_location('stg_alpha__sales')) }}
 
 with base as (
     select

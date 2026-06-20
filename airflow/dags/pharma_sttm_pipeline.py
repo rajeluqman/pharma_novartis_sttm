@@ -86,6 +86,13 @@ def pharma_sttm_pipeline():
         land() >> bronze()
 
     @task
+    def dbt_seed():  # static ATC crosswalk reference data -> persisted to S3 via seed roundtrip
+        # O-AIR-07: the orchestrated DAG previously never seeded; the seed table is :memory: only,
+        # so marts.core (a separate subprocess) couldn't read atc_pharmclass_crosswalk. `dbt seed`
+        # builds it and the on-run-end hook exports it to s3://.../silver/seeds/ for cross-task reads.
+        dbt("seed")
+
+    @task
     def dbt_enrich():  # dbt run -s staging  (per-source Silver, divergent)
         dbt("run", "-s", "staging")
 
@@ -103,8 +110,8 @@ def pharma_sttm_pipeline():
         dbt("test")
         run(["python3", "scripts/run_ge_validation.py"])
 
-    # bronze for all 3 -> enrich -> consolidate marts -> OBT -> DQ
-    [alpha(), beta(), gamma()] >> dbt_enrich() >> dbt_marts() >> dbt_serving() >> dq_checks()
+    # bronze for all 3 (+ seed reference data) -> enrich -> consolidate marts -> OBT -> DQ
+    [alpha(), beta(), gamma(), dbt_seed()] >> dbt_enrich() >> dbt_marts() >> dbt_serving() >> dq_checks()
 
 
 pharma_sttm_pipeline()
