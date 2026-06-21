@@ -31,8 +31,19 @@ def run(cmd: list[str], *, cwd: pathlib.Path = REPO_ROOT, extra_env: dict | None
     subprocess.run(cmd, cwd=str(cwd), env=env, check=True)
 
 
-def dbt(*args: str) -> None:
-    run(["dbt", *args, "--project-dir", str(DBT_PROJECT_DIR), "--profiles-dir", str(DBT_PROJECT_DIR)])
+def dbt(*args: str, run_id: str | None = None) -> None:
+    cmd = ["dbt", *args, "--project-dir", str(DBT_PROJECT_DIR), "--profiles-dir", str(DBT_PROJECT_DIR)]
+    if run_id is not None:
+        cmd += ["--vars", f'{{"run_id": "{run_id}"}}']
+    run(cmd)
+
+
+def gold_run_id(ts_nodash: str) -> str:
+    # O-AIR-01: one run_id per DAG run (shared by every dbt(...) call below), so marts/serving
+    # write to the SAME gold/<run_id>/ prefix and publish_gold() publishes exactly that prefix.
+    # ts_nodash is the DAG run's logical timestamp (identical across every task in this run, not
+    # wall-clock task time), so each task can derive it independently without passing it via XCom.
+    return f"run-{ts_nodash}"
 
 
 @dag(
@@ -86,32 +97,56 @@ def pharma_sttm_pipeline():
         land() >> bronze()
 
     @task
-    def dbt_seed():  # static ATC crosswalk reference data -> persisted to S3 via seed roundtrip
+    def dbt_seed(ts_nodash=None):  # static ATC crosswalk reference data -> persisted to S3 via seed roundtrip
         # O-AIR-07: the orchestrated DAG previously never seeded; the seed table is :memory: only,
         # so marts.core (a separate subprocess) couldn't read atc_pharmclass_crosswalk. `dbt seed`
         # builds it and the on-run-end hook exports it to s3://.../silver/seeds/ for cross-task reads.
-        dbt("seed")
+        dbt("seed", run_id=gold_run_id(ts_nodash))
 
     @task
-    def dbt_enrich():  # dbt run -s staging  (per-source Silver, divergent)
-        dbt("run", "-s", "staging")
+    def dbt_enrich(ts_nodash=None):  # dbt run -s staging  (per-source Silver, divergent)
+        dbt("run", "-s", "staging", run_id=gold_run_id(ts_nodash))
 
     @task
-    def dbt_marts():  # dbt snapshot (dim_drug SCD2 source) then dbt run -s marts.core (STAR)
-        dbt("snapshot")          # snap_beta_ndc must exist before dim_drug builds from it
-        dbt("run", "-s", "marts.core")
+    def dbt_marts(ts_nodash=None):  # dbt snapshot (dim_drug SCD2 source) then dbt run -s marts.core (STAR)
+        run_id = gold_run_id(ts_nodash)
+        dbt("snapshot", run_id=run_id)          # snap_beta_ndc must exist before dim_drug builds from it
+        dbt("run", "-s", "marts.core", run_id=run_id)
 
     @task
-    def dbt_serving():  # dbt run -s marts.serving  (OBT from star)
-        dbt("run", "-s", "marts.serving")
+    def dbt_serving(ts_nodash=None):  # dbt run -s marts.serving  (OBT from star)
+        dbt("run", "-s", "marts.serving", run_id=gold_run_id(ts_nodash))
 
     @task
-    def dq_checks():  # great_expectations + crosswalk coverage KPI (ADR-003)
-        dbt("test")
+    def dbt_test(ts_nodash=None):  # dbt schema/data tests against THIS run's unpublished gold/<run_id>/
+        dbt("test", run_id=gold_run_id(ts_nodash))
+
+    @task
+    def publish_gold(ts_nodash=None):
+        # O-AIR-01: verify-then-copy this run's gold/<run_id>/ into the fixed gold/_current/
+        # pointer (scripts/publish_gold.py) so Snowflake + GE validation see THIS run, not a
+        # permanently-stale gold/dev/ that nothing downstream ever reads.
+        run(["python3", "scripts/publish_gold.py", "--run-id", gold_run_id(ts_nodash)])
+
+    @task
+    def dq_validate():  # great_expectations + crosswalk coverage KPI (ADR-003)
+        # Runs AFTER publish_gold, not before: run_ge_validation.py reads ONLY gold/_current/
+        # (scripts/run_ge_validation.py's gold_current() helper), so running it pre-publish would
+        # just re-validate the PREVIOUS run's already-validated data, never this run's output.
+        # Mirrors the proven order in scripts/run_pipeline_aws.sh (build -> publish -> GE).
         run(["python3", "scripts/run_ge_validation.py"])
 
-    # bronze for all 3 (+ seed reference data) -> enrich -> consolidate marts -> OBT -> DQ
-    [alpha(), beta(), gamma(), dbt_seed()] >> dbt_enrich() >> dbt_marts() >> dbt_serving() >> dq_checks()
+    # bronze for all 3 (+ seed reference data) -> enrich -> consolidate marts -> OBT ->
+    # test (gates on THIS run's unpublished gold/<run_id>/) -> publish -> GE smoke test on _current
+    (
+        [alpha(), beta(), gamma(), dbt_seed()]
+        >> dbt_enrich()
+        >> dbt_marts()
+        >> dbt_serving()
+        >> dbt_test()
+        >> publish_gold()
+        >> dq_validate()
+    )
 
 
 pharma_sttm_pipeline()
