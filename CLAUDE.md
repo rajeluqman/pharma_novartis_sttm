@@ -172,10 +172,33 @@ amended); never becomes the governed model (DuckDB+S3 stays sole system of recor
   Re-verified for real: MWAA-faithful `scripts/parse_test_mwaa.sh` parsed both DAGs clean (zero
   import errors), then a live smoke-test POST through `notify_slack()` was owner-confirmed received
   in the real Slack channel.
-- **Open follow-up (separate review, not yet started):** scoped "demonstration mode" extension to
-  `spark_gym_guard.py` so a real run can target the B4 bucket specifically (never prod, never the
-  DuckDB gym bucket) while drills stay permanently MinIO-only — goes through its own
-  DPE/senior-DE/DA chain before any real Spark run touches B4.
+- **2026-06-21: guard demonstration-mode extension built** (the B4 follow-up above). Owner
+  explicitly decided the real demo reads the REAL `gold/_current/` (read-only by code
+  discipline, not IAM) AND writes only to the real B4 bucket — not a MinIO-read/real-write
+  hybrid. `scripts/spark_gym_guard.py` now branches on an explicit `SPARK_DEMO_MODE=1` flag
+  (exact-match, mirrors `GYM_MODE`'s convention — a typo'd value falls through to drill rules
+  and fails them, never silently passes): DEMO rules require `SPARK_S3_BUCKET` ==
+  `novartis-pharma-sttm-spark-staging` exactly, `SPARK_READ_S3_BUCKET` ==
+  `novartis-pharma-sttm-lake` exactly, `SPARK_S3_ENDPOINT` EMPTY (real creds + a non-empty
+  endpoint, local or attacker-controlled, is rejected as an exfiltration vector), and
+  AKID/secret MUST look real (inverted from drill mode). `spark/spark_session_factory.py` now
+  branches its S3A config on whether `SPARK_S3_ENDPOINT` is set (MinIO: path-style + plain
+  HTTP; demo: `fs.s3a.endpoint.region` + vhost-style + TLS) rather than hardcoding the MinIO
+  shape unconditionally. New `scripts/run_spark_demo_aws.sh` sources `.env` + `.env.aws` (the
+  same real-AWS overlay `run_pipeline_aws.sh` uses, so reconcile.py's DuckDB leg also reads the
+  real bucket, defensively overriding any stale `gym.env` state in the same shell) and aliases
+  the real creds onto the `SPARK_*` names. Verified locally: 31/31 `test_spark_gym_guard.py`
+  checks pass (16 original drill checks unchanged + 15 new demo-mode checks), `py_compile` +
+  `ruff` clean, and a full MinIO drill regression (`build_delta_slice.py` + `reconcile.py`, all
+  5 star models row-count + key-set exact match) proves the factory refactor changed zero
+  drill-mode behavior. Cabinet review (DPE/senior-DE/DA) of this guard extension is CLOSED,
+  APPROVED, no findings of any severity — each persona independently re-ran the test suite,
+  `py_compile`, and `ruff` themselves (not trusting the build's claim), traced both job scripts
+  to confirm zero write calls against the read bucket, and added one adversarial check beyond
+  the shipped suite. See `SIGN_OFF_LOG.md` "ADR-007 B4 guard demonstration-mode extension"
+  entry. **Still not yet run for real** — `scripts/run_spark_demo_aws.sh` itself remains
+  owner-gated; this review clears the guard mechanism only, not the real-AWS run, which needs
+  its own separate explicit owner confirmation before execution.
 - Side-effect of this build: `docs/ADR/ADR-006-A1-incubator-fidelity-amendment.md` gained an
   addendum downgrading the sealed-rubric "stays untracked" requirement (repo went private; owner
   deliberately tracked the rubric for cikgu-teaching durability) — `ci.yml`'s now-superseded
