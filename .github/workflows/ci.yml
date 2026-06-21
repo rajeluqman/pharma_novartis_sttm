@@ -96,10 +96,3 @@ jobs:
           cd dbt
           dbt deps || true
           dbt parse
-
-      - name: Sealed answer keys must stay untracked (gym integrity)
-        run: |
-          if [ -n "$(git ls-files 'docs/incidents/.solutions/')" ]; then
-            echo "::error::a sealed rubric under docs/incidents/.solutions/ is tracked — remove it"
-            exit 1
-          fi

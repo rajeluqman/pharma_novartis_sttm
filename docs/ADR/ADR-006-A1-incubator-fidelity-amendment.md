@@ -84,6 +84,29 @@ the SLA gym's 🟡→✅ promotions. Reuse only the evidence-gate from the troub
   other layer-05 cards (L-SNO-01/02/04/05, pure S3-side `publish_gold.py` mechanics) are
   unaffected and cleared to L10 by the same MinIO-loop evidence that cleared layers 04/06.
 
+## Addendum: sealed rubric — untracked-ness downgraded (2026-06-21)
+Repo flipped PRIVATE (owner decision, confirmed `gh repo view --json isPrivate` → `true`). Owner
+then deliberately tracked `docs/incidents/.solutions/INCIDENT_2026-06-19_beta-zero-byte-landing.md`
+(commit `65df336`, "Track sealed incident rubrics in private repo for cikgu teaching"), reasoning
+that a gitignored file is not backed up — it would be silently lost on Codespace
+recreation/re-clone, breaking the rubric for cikgu's future use. This is a real durability
+problem the untracked approach could not solve.
+
+Re-assessed §4/§6's `gitignored`/`stays untracked` requirement against the two functions it was
+actually serving:
+- **Public-leak prevention** — the original primary driver. Moot now: the repo is private, so
+  nobody outside has read access regardless of git-tracked status.
+- **Anti-accidental-self-spoiler friction** — untracked-ness never technically blocked the owner
+  from opening the file at any time; it only kept it out of `git ls-files`/push. This was always
+  a discipline nudge, not an access boundary, so tracking it removes no real protection.
+
+**Ruling: §4/§6's "stays untracked" clause is downgraded from a binding mechanical control to a
+non-requirement**, superseded by deliberate git-tracking for durability. The rubric itself stays
+sealed in spirit (acceptable-paths + must-not-do list, not skimmed casually mid-drill by
+convention) — only the untracked-enforcement mechanism is retired. CI's "sealed answer keys must
+stay untracked" step is removed accordingly (`.github/workflows/ci.yml`). Re-activate the
+untracked requirement (and restore the CI gate) if this repo ever goes public again.
+
 ## C3 clearance (2026-06-19)
 ADR-006-A1 §1-2's mechanism-proof bar — "the cited file:line guards behave as described against
 real S3-compatible storage, not just read as source" — is **satisfied for layers 04, 05, 06**:

@@ -146,6 +146,26 @@ library). @cikgu teaches from the symptom + card (never the sealed cause).
   Fixing the DAG (`O-AIR-07`) and the dedup (`P-PMR-07`) are both separate, not-yet-proposed
   build decisions. Next: depth (more cards per phase, target ~100), or pick up either fix.
 
+## Track S — Spark + Delta DEMONSTRATION track (ADR-007)
+Fenced, non-production, additive-never-substitutive track admitted 2026-06-20 (`docs/ADR/
+ADR-007-spark-delta-demonstration-track.md`) — `local[*]`-only PySpark + Delta Lake against the
+SAME ADR-001 star, read read-only from `gold/_current/`, written to a separate Spark staging
+bucket. Never managed/paid compute (Glue/EMR/Databricks stay rejected, ADR-005 reaffirmed not
+amended); never becomes the governed model (DuckDB+S3 stays sole system of record, ADR-007 B8).
+- **Status (2026-06-21):** gate-0 (B2 version pins + B3 `spark_gym_guard.py` fail-closed
+  preflight) + B5 (`spark_delta_demo_v1` DAG, parse-test green) + B6 (CI gates for `spark/**`)
+  + B8 (`reconcile.py` two-engine row-count/key-set check) + B9 (`spark/README.md`
+  honesty-scoping) all **CLOSED, GREEN** — built, independently re-verified through DPE →
+  senior-DE → DA, each re-deriving from source. See `SIGN_OFF_LOG.md` "ADR-007 gate-0 + B5/B6/B8/B9
+  build closure". Run via `spark/README.md`'s documented commands or the new DAG.
+- **Open, owner-gated:** B4 (separate real-AWS staging bucket — STOP, needs explicit owner
+  confirmation before any provisioning) and B7 (Slack webhook wiring into both DAGs — needs a
+  real webhook secret from the owner, not fabricated).
+- Side-effect of this build: `docs/ADR/ADR-006-A1-incubator-fidelity-amendment.md` gained an
+  addendum downgrading the sealed-rubric "stays untracked" requirement (repo went private; owner
+  deliberately tracked the rubric for cikgu-teaching durability) — `ci.yml`'s now-superseded
+  untracked-check step was removed accordingly, owner-approved.
+
 ## Lead Deliverables (Architecture Handbook / Erwin ERD / STTM)
 - `docs/architecture_handbook/AH.md` — consolidated architecture, owned by @data-architect
 - `docs/erwin/ERD.md` — Erwin-style model (Enrich/Mart/RRD), owned by @data-architect

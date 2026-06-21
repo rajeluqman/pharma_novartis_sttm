@@ -11,13 +11,20 @@ docs nor any resume narrative built from it over-claim.
 - The Delta Lake transaction log: real `write.format("delta")`, `OPTIMIZE ... ZORDER BY (...)`,
   and time-travel-capable history — against real Delta tables on S3-compatible storage (MinIO
   locally; B4's real-AWS staging bucket once provisioned).
-- Broadcast-vs-sort-merge join selection by Spark's own planner (whatever it picks for this
-  data's size — not forced).
 - Hadoop's S3A connector (`spark.hadoop.fs.s3a.*`) as a structurally separate client from
   DuckDB's httpfs — a second, independently-guarded path to S3 (`scripts/spark_gym_guard.py`).
 - A two-engine reconciliation: the Delta slice's row count and key set are proven to exactly
   match the DuckDB mart for the same `gold/_current/` snapshot (`spark/jobs/reconcile.py`,
   ADR-007 B8) — not asserted, run and printed.
+
+## What `local[*]` is capable of, not yet exercised by current code
+
+ADR-007 B9 names broadcast-vs-sort-merge join selection as something `local[*]`'s own planner
+is capable of demonstrating. **Be precise about this one**: neither `build_delta_slice.py` nor
+`reconcile.py` runs an actual Spark join today (the reconciliation in `reconcile.py` diffs
+driver-collected key sets in Python, not a Spark-side join) — so this has NOT yet been run and
+observed in this repo, unlike every bullet above. Don't cite it as verified until a job here
+actually runs `df.explain()` on a real join over these tables and the plan is captured.
 
 ## What this does NOT demonstrate (permanent fidelity ceiling, by design)
 
