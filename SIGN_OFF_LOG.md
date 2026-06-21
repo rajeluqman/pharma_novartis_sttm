@@ -425,3 +425,56 @@ still a future step, not closed by this entry.
 - `CLAUDE.md` Track S section — updated to record the guard extension as built; `SIGN_OFF_LOG.md` — this entry.
 
 **Outcome**: **ADR-007 B4 guard demonstration-mode extension CLOSED, GREEN.** The gap left open in the prior "ADR-007 B4 + B7 closure" entry (the real B4 staging bucket existing but being structurally unusable by `spark_session_factory()`) is now resolved: the guard has a fail-closed, exact-match-gated demo-mode path requiring the real B4 bucket as the sole write target, the real prod bucket as the sole read target with a dedicated read/write-collision check, an empty endpoint (rejecting even local non-empty values), and real-shaped credentials — independently re-verified by running, not reading-and-trusting, all three required commands (31/31 test checks, clean `py_compile`, clean `ruff`), plus adversarial traces constructed independently of the shipped test file. Both job scripts were confirmed by direct read to contain zero write/delete calls against the read bucket. No findings of any severity. `scripts/run_spark_demo_aws.sh` remains correctly **not executed** — this review authorizes the guard mechanism only, not the real-AWS run itself, which stays its own separate owner-gated step.
+
+---
+
+## ADR-007 B4 — the one real Spark+Delta demonstration run executed
+
+**Date**: 2026-06-21
+**Status**: APPROVED (executed, owner-confirmed in advance)
+
+Owner explicitly confirmed both this real run and the prior guard-extension commit before either
+happened (per the standing cloud-provisioning-needs-confirmation rule). `scripts/run_spark_demo_aws.sh`
+was run for real against the live AWS account.
+
+**First attempt FAILED safely, no AWS contact**: crashed during JVM gateway startup with
+`java.lang.UnsupportedOperationException: getSubject is not supported` — Hadoop 3.3.4's
+`UserGroupInformation.getCurrentUser()` calls `Subject.getSubject()`, which this Codespace's default
+JDK (25.0.2, resolved via `JAVA_HOME=/usr/local/sdkman/candidates/java/current`) no longer supports.
+The crash occurred before `SparkSession.builder.getOrCreate()` completed — no S3A client was ever
+constructed, so neither the real prod bucket nor the B4 bucket was contacted. Root cause: the script
+set `SPARK_JAVA_HOME` (mirroring the env var name `airflow/dags/spark_delta_demo_dag.py`'s `run()`
+helper reads) but never itself translated that into `JAVA_HOME`/`PATH` the way the DAG helper does per
+subprocess — a real gap in the script, not in the guard or the job logic. Fixed: added
+`export JAVA_HOME="${SPARK_JAVA_HOME}"` + prepended `${SPARK_JAVA_HOME}/bin` to `PATH`, mirroring the
+DAG's existing override exactly. `bash -n` re-confirmed clean; no other file touched.
+
+**Second attempt SUCCEEDED**: `[0/2]` guard preflight passed in DEMO mode. `[1/2] build_delta_slice`
+read `s3a://novartis-pharma-sttm-lake/gold/_current/` (real prod bucket, read-only) and wrote 5 Delta
+tables to `s3a://novartis-pharma-sttm-spark-staging/delta/` (the isolated B4 bucket) — dim_date 4383
+rows, dim_condition 836 rows, dim_drug 133654 rows (+`OPTIMIZE ZORDER BY (drug_sk)`), fact_sales 16848
+rows (+`OPTIMIZE ZORDER BY (drug_sk)`), fact_review 215063 rows. `[2/2] reconcile` compared the
+Spark+Delta slice against the DuckDB mart reading the same `gold/_current/` — all 5 star models
+matched exactly on row count + key set: `dim_date 4383=4383 PASS`, `dim_condition 836=836 PASS`,
+`dim_drug 133654=133654 PASS`, `fact_sales 16848=16848 PASS`, `fact_review 215063=215063 PASS`.
+Counts match the values independently verified live on AWS in the 2026-06-19 ADR-005 migration
+sign-off and every reconciliation since — no drift.
+
+**What changed**:
+- `scripts/run_spark_demo_aws.sh` — added the `JAVA_HOME`/`PATH` override (5 lines), committed
+  separately (`edbd568`) from the guard-extension commit (`4ce9a0e`) since it's a distinct fix
+  discovered only by attempting the real run.
+- `CLAUDE.md`, `SIGN_OFF_LOG.md` — this entry and the Track S status update.
+- **No data was published anywhere production reads.** Per ADR-007 B8(a), this Delta output is
+  never written to `gold/_current/` and Snowflake/GE never read the B4 bucket — this run proves
+  the demonstration track end-to-end, it does not feed anything downstream.
+
+**Outcome**: **ADR-007's Spark+Delta demonstration track is now closed end-to-end, including the one
+real run B4 always required.** All 9 binding conditions (B1–B9) are satisfied: the track is additive
+(B1), `local[*]`-only (never paid/managed compute, confirmed again by this run's `master("local[*]")`)
+(B2), guard-gated (B3, including the new demo-mode path just closed), uses a distinct owner-gated
+bucket (B4), runs via its own DAG/subprocess pattern (B5), is CI-gated (B6), reads but never
+republishes the governed star (B8(a)/(b), reconciled exact-match), and is honestly scoped (B9 — this
+log entry discloses the JDK-incompatibility failure mode rather than omitting it). No ADR amendment.
+No further follow-up required unless the owner wants to extend the demonstration (e.g., an actual
+Spark join/aggregation job, which `spark/README.md` already discloses as not-yet-exercised).

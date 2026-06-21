@@ -196,9 +196,18 @@ amended); never becomes the governed model (DuckDB+S3 stays sole system of recor
   `py_compile`, and `ruff` themselves (not trusting the build's claim), traced both job scripts
   to confirm zero write calls against the read bucket, and added one adversarial check beyond
   the shipped suite. See `SIGN_OFF_LOG.md` "ADR-007 B4 guard demonstration-mode extension"
-  entry. **Still not yet run for real** — `scripts/run_spark_demo_aws.sh` itself remains
-  owner-gated; this review clears the guard mechanism only, not the real-AWS run, which needs
-  its own separate explicit owner confirmation before execution.
+  entry. Committed `4ce9a0e`.
+- **2026-06-21: the ONE real ADR-007 B4 demonstration run executed**, owner-confirmed first.
+  First attempt crashed at JVM startup (`Subject.getSubject` `UnsupportedOperationException` —
+  Hadoop 3.3.4 can't run on this Codespace's default JDK 25) before any AWS call was made,
+  because `run_spark_demo_aws.sh` set `SPARK_JAVA_HOME` but never translated it to
+  `JAVA_HOME`/`PATH` the way `spark_delta_demo_dag.py`'s `run()` helper already does per
+  subprocess. Fixed (mirrors that same override), re-ran, succeeded: read the real
+  `gold/_current/` and wrote 5 Delta tables (with `OPTIMIZE ZORDER` on `dim_drug`/`fact_sales`)
+  to `s3a://novartis-pharma-sttm-spark-staging/delta/`; `reconcile.py` matched DuckDB exactly on
+  all 5 star models (dim_date 4383, dim_condition 836, dim_drug 133654, fact_sales 16848,
+  fact_review 215063). Fix committed `edbd568`. ADR-007's full demonstration track (B1–B9) is
+  now closed end-to-end, including the one real run.
 - Side-effect of this build: `docs/ADR/ADR-006-A1-incubator-fidelity-amendment.md` gained an
   addendum downgrading the sealed-rubric "stays untracked" requirement (repo went private; owner
   deliberately tracked the rubric for cikgu-teaching durability) — `ci.yml`'s now-superseded
