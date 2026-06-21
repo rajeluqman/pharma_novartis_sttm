@@ -26,6 +26,8 @@ import subprocess
 import pendulum
 from airflow.decorators import dag, task
 
+from slack_notify import task_failure_callback
+
 START = pendulum.datetime(2026, 6, 1, tz="UTC")
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
 
@@ -52,6 +54,7 @@ def run(cmd: list[str]) -> None:
     default_args={
         "retries": 0,  # demonstration track — a failed drill is investigated, not auto-retried
         "execution_timeout": pendulum.duration(minutes=30),
+        "on_failure_callback": task_failure_callback,  # ADR-007 B7 — Slack on task failure
     },
     tags=["demonstration", "spark", "delta", "non-production"],
 )

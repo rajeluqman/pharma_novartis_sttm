@@ -158,9 +158,24 @@ amended); never becomes the governed model (DuckDB+S3 stays sole system of recor
   honesty-scoping) all **CLOSED, GREEN** — built, independently re-verified through DPE →
   senior-DE → DA, each re-deriving from source. See `SIGN_OFF_LOG.md` "ADR-007 gate-0 + B5/B6/B8/B9
   build closure". Run via `spark/README.md`'s documented commands or the new DAG.
-- **Open, owner-gated:** B4 (separate real-AWS staging bucket — STOP, needs explicit owner
-  confirmation before any provisioning) and B7 (Slack webhook wiring into both DAGs — needs a
-  real webhook secret from the owner, not fabricated).
+- **2026-06-21: B4 + B7 closed.** B4 — `scripts/provision_s3_staging.sh` run (owner-confirmed)
+  against real AWS: bucket `novartis-pharma-sttm-spark-staging` (ap-southeast-1), versioning ON,
+  30d noncurrent lifecycle bucket-wide + 7d short-TTL on `delta/`, region-lock policy. **Not yet
+  usable** by `spark_session_factory()` — `scripts/spark_gym_guard.py` still hard-rejects any
+  non-MinIO endpoint/real-AWS creds with no demonstration-mode exception; that guard extension is
+  a separate, deliberately-deferred follow-up requiring its own DPE/senior-DE/DA review (see below).
+  B7 — owner supplied a real webhook URL into `.env` (`SLACK_WEBHOOK_URL`, gitignored); built
+  `airflow/dags/slack_notify.py` (stdlib-only, flat-imported by both DAG files — `scripts/` isn't
+  mounted by the MWAA parse gate, so the helper had to live inside `airflow/dags/` itself) wired as
+  `on_failure_callback` on both DAGs, plus `sla_miss_callback` on `pharma_sttm_pipeline_v1` only
+  (the BONUS half of B7 — makes the previously-decorative T055 `sla=SLA` budget actually alert).
+  Re-verified for real: MWAA-faithful `scripts/parse_test_mwaa.sh` parsed both DAGs clean (zero
+  import errors), then a live smoke-test POST through `notify_slack()` was owner-confirmed received
+  in the real Slack channel.
+- **Open follow-up (separate review, not yet started):** scoped "demonstration mode" extension to
+  `spark_gym_guard.py` so a real run can target the B4 bucket specifically (never prod, never the
+  DuckDB gym bucket) while drills stay permanently MinIO-only — goes through its own
+  DPE/senior-DE/DA chain before any real Spark run touches B4.
 - Side-effect of this build: `docs/ADR/ADR-006-A1-incubator-fidelity-amendment.md` gained an
   addendum downgrading the sealed-rubric "stays untracked" requirement (repo went private; owner
   deliberately tracked the rubric for cikgu-teaching durability) — `ci.yml`'s now-superseded

@@ -17,6 +17,8 @@ import subprocess
 import pendulum
 from airflow.decorators import dag, task, task_group
 
+from slack_notify import sla_miss_callback, task_failure_callback
+
 START = pendulum.datetime(2026, 6, 1, tz="UTC")
 SLA = pendulum.duration(minutes=240)  # 03:00 -> 07:00
 
@@ -56,7 +58,9 @@ def gold_run_id(ts_nodash: str) -> str:
         "execution_timeout": pendulum.duration(minutes=30),  # T051 — no task hangs past its slice of the 240-min budget
         "retries": 2,                                        # T052 — absorb transient blips (safe: tasks idempotent, T010)
         "retry_delay": pendulum.duration(minutes=5),         # T053 — give external systems time to recover
+        "on_failure_callback": task_failure_callback,        # ADR-007 B7 — Slack on task failure
     },
+    sla_miss_callback=sla_miss_callback,  # ADR-007 B7 — makes T055's `sla=SLA` budget actually alert
     tags=["enVision", "pharma", "sttm", "medallion"],
 )
 def pharma_sttm_pipeline():
