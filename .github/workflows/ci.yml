@@ -32,6 +32,55 @@ jobs:
           pip install --quiet ruff
           ruff check scripts airflow/dags
 
+      # ADR-007 B6 — Spark + Delta DEMONSTRATION track static gates. Data-free, $0, same
+      # tier as the gates above (no pyspark/JVM install — this never executes a SparkSession).
+      - name: Spark track — syntax + lint
+        run: |
+          python -m py_compile $(find spark tests/unit -name '*.py')
+          ruff check spark tests/unit
+
+      - name: Spark track — jar coordinates match the B2 pin
+        run: |
+          python3 - <<'PY'
+          import re
+          import sys
+
+          req = open("requirements/requirements-spark.txt").read()
+          fac = open("spark/spark_session_factory.py").read()
+
+          m = re.search(r"--packages (\S+:\S+)", req)  # coordinates always contain ':'; skips the earlier prose "(see below)" mention
+          if not m:
+              print("::error::requirements-spark.txt is missing the documented --packages coordinate line")
+              sys.exit(1)
+          pinned = m.group(1)
+
+          hadoop = re.search(r'HADOOP_AWS_PACKAGES = "([^"]+)"', fac)
+          delta = re.search(r'DELTA_PACKAGE = "([^"]+)"', fac)
+          if not (hadoop and delta):
+              print("::error::spark_session_factory.py is missing HADOOP_AWS_PACKAGES/DELTA_PACKAGE")
+              sys.exit(1)
+          actual = f"{hadoop.group(1)},{delta.group(1)}"
+
+          if pinned != actual:
+              print("::error::jar coordinate mismatch (ADR-007 B2) — requirements-spark.txt says:")
+              print(f"  {pinned}")
+              print("spark_session_factory.py says:")
+              print(f"  {actual}")
+              sys.exit(1)
+          print(f"jar coordinates match: {actual}")
+          PY
+
+      - name: Spark track — no raw SparkSession.builder outside the factory
+        run: |
+          hits=$(grep -rn "SparkSession.builder" spark/ --include="*.py" | grep -v "^spark/spark_session_factory.py:" || true)
+          if [ -n "$hits" ]; then
+            echo "::error::raw SparkSession.builder found outside spark_session_factory.py (ADR-007 B3) —"
+            echo "every Spark script must go through spark_session_factory() so the fail-closed guard runs:"
+            echo "$hits"
+            exit 1
+          fi
+          echo "no raw SparkSession.builder outside spark_session_factory.py"
+
       - name: Great Expectations suites are valid JSON
         run: |
           for f in data_quality/expectations/*.json; do

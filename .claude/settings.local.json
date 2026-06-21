@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(bash /workspaces/pharma_novartis_sttm/de-cabinet-gym-v1/novartis_pharma_sttm_dag_lab/scripts/provision_s3.sh*)",
+      "Bash(bash /workspaces/pharma_novartis_sttm/de-cabinet-gym-v1/novartis_pharma_sttm_dag_lab/scripts/provision_snowflake_iam.sh*)",
+      "Bash(bash /workspaces/pharma_novartis_sttm/de-cabinet-gym-v1/novartis_pharma_sttm_dag_lab/scripts/run_pipeline_aws.sh*)",
+      "Bash(bash scripts/provision_s3.sh*)",
+      "Bash(bash scripts/provision_snowflake_iam.sh*)",
+      "Bash(*scripts/seed_landing_to_s3.py*)",
+      "Bash(*scripts/provision_snowflake_veneer.py*)",
+      "Bash(*scripts/publish_to_confluence.py*)",
+      "Bash(*scripts/load_bronze.py*)",
+      "Bash(*scripts/publish_gold.py*)",
+      "Bash(*scripts/run_ge_validation.py*)",
+      "Bash(*dbt build*)",
+      "Bash(*aws s3 ls*)",
+      "Bash(*aws s3api get-*)",
+      "Bash(*aws s3api head-bucket*)",
+      "Bash(*aws s3api list-*)",
+      "Bash(*aws sts get-caller-identity*)"
+    ]
+  }
+}

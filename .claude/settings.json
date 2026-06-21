@@ -1,0 +1,8 @@
+{
+  "includeCoAuthoredBy": false,
+  "statusLine": {
+    "type": "command",
+    "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/finops_statusline.py\"",
+    "refreshInterval": 10
+  }
+}

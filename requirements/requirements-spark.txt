@@ -1,0 +1,43 @@
+# =============================================================================
+# requirements-spark.txt  —  Spark + Delta DEMONSTRATION track (ADR-007 B2)
+# =============================================================================
+# Target environment : local[*] ONLY. Never submitted to Glue/EMR/any managed
+#                       cluster — see ADR-007 fence principle #2. This file is
+#                       NOT part of the production stack (ADR-005 unchanged);
+#                       it drives only the spark/ demonstration track.
+#
+# SEPARATE BY DESIGN  : do not merge into requirements/requirements.txt (the
+#                       DuckDB/dbt dev stack) or requirements-mwaa.txt (the
+#                       MWAA deploy stack). Three independent dependency
+#                       worlds, mirroring the existing MWAA/dev split.
+#
+# Java pin (BINDING, ADR-007 B2): Java 21 — Spark does not run on the
+#   Codespace-default Java 25. Use the sdkman-managed 21.0.10-ms candidate
+#   already present at /usr/local/sdkman/candidates/java/21.0.10-ms (do NOT
+#   change the global `java` alternative — export JAVA_HOME per-invocation,
+#   see spark/spark_session_factory.py).
+#     export JAVA_HOME=/usr/local/sdkman/candidates/java/21.0.10-ms
+#
+# Version matrix (BINDING, ADR-007 B2) — Spark 3.5.x, NOT Spark 4:
+#   pyspark      3.5.8   — last patch on the 3.5.x line (Spark 4 dropped,
+#                          ADR-007 explicitly pins the 3.5 line)
+#   delta-spark  3.2.1   — Delta Lake's 3.2.x line targets Spark 3.5.x
+#                          (3.3.x targets Spark 4 — do not bump without
+#                          re-deriving the whole matrix)
+#   hadoop-aws / aws-java-sdk-bundle are NOT pip packages — they are JVM jars
+#   pulled at spark-submit time via --packages (see below), pinned to the
+#   EXACT versions Spark 3.5.x's bundled Hadoop 3.3.4 client expects:
+#     org.apache.hadoop:hadoop-aws:3.3.4
+#     com.amazonaws:aws-java-sdk-bundle:1.12.262
+#   Mismatched jar versions are the #1 cause of S3A classpath/auth failures —
+#   do not let pip upgrade pyspark without re-checking this pairing.
+# -----------------------------------------------------------------------------
+pyspark==3.5.8
+delta-spark==3.2.1
+
+# -----------------------------------------------------------------------------
+# spark-submit jar coordinates (NOT installed by pip — referenced here so CI
+# (ADR-007 B6) can grep this file as the single source of truth and assert
+# spark/spark_session_factory.py's --packages string matches exactly):
+#   --packages org.apache.hadoop:hadoop-aws:3.3.4,com.amazonaws:aws-java-sdk-bundle:1.12.262,io.delta:delta-spark_2.12:3.2.1
+# -----------------------------------------------------------------------------

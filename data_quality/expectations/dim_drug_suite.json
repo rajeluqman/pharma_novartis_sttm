@@ -1,6 +1,6 @@
 {
   "name": "dim_drug_suite",
-  "id": "3a6d8768-a447-48ec-8af5-c45cf871de87",
+  "id": "57f7dee0-23d6-4eda-aa4e-fc8d442845da",
   "expectations": [
     {
       "type": "expect_table_row_count_to_be_between",
@@ -9,7 +9,7 @@
         "max_value": 200000
       },
       "meta": {},
-      "id": "e27ea0f4-acf7-49b2-92e2-544b21557edf",
+      "id": "a41736ac-4f05-48ce-bde9-9f31dca719ef",
       "severity": "critical"
     },
     {
@@ -18,7 +18,7 @@
         "column": "drug_sk"
       },
       "meta": {},
-      "id": "e6215895-8961-40da-9aa9-69f0c5526a1b",
+      "id": "4544dff6-3f22-45f9-9a71-2706991665fd",
       "severity": "critical"
     },
     {
@@ -27,7 +27,7 @@
         "column": "drug_sk"
       },
       "meta": {},
-      "id": "0eb4e95e-c81f-4757-8390-27daa2a74ff4",
+      "id": "60eacfaf-2ffe-447b-8af6-59d800a864be",
       "severity": "critical"
     },
     {
@@ -40,7 +40,7 @@
         ]
       },
       "meta": {},
-      "id": "ab5d9ca0-648a-4740-a55c-6f67d5e70f4a",
+      "id": "dde0cdd0-a90f-476b-bf29-334e9a93213d",
       "severity": "critical"
     }
   ],
