@@ -35,6 +35,11 @@ export SPARK_AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID}"
 export SPARK_AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY}"
 export SPARK_AWS_REGION="${AWS_REGION:-${AWS_DEFAULT_REGION:-ap-southeast-1}}"
 export SPARK_JAVA_HOME="${SPARK_JAVA_HOME:-/usr/local/sdkman/candidates/java/21.0.10-ms}"
+# ADR-007 B2: the Codespace default JAVA_HOME is too new for Hadoop 3.3.4 (Subject.getSubject
+# was removed in JDK 24+) — override JAVA_HOME/PATH to the pinned Java 21 candidate, same as
+# airflow/dags/spark_delta_demo_dag.py's run() helper does per subprocess.
+export JAVA_HOME="${SPARK_JAVA_HOME}"
+export PATH="${SPARK_JAVA_HOME}/bin:${PATH}"
 PY=.venv/bin/python
 
 echo "============================================================"
