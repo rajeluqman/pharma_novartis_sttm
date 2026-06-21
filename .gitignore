@@ -41,8 +41,9 @@ data_quality/validations/
 airflow/logs/
 *.log
 
-# Incubator sealed answer keys (RUBRICS) — never committed (ADR-006-A1; gym integrity)
-docs/incidents/.solutions/
+# Incubator sealed answer keys (RUBRICS) — now tracked in this PRIVATE repo so
+# cikgu can teach from them (owner decision 2026-06-21). Keep private; do NOT
+# re-publish to any public mirror (ADR-006-A1 gym integrity still applies there).
 
 # OS
 .DS_Store
