@@ -1,13 +1,17 @@
-# <PROJECT_NAME> — AI Context
+# Pharma Novartis STTM (Helvetia Pharma Commercial) — AI Context
 
 > Auto-loaded by Claude Code every session.
 > Do NOT commit this file to GitHub.
 
 ## Project Overview
-**Domain**: <domain>
-**Dataset**: <dataset name> — <source URL>
-**Problem**: <one-sentence what pipeline solves>
-**Modelling**: <Kimball / OBT / Hybrid> — <one-line justification>
+**Domain**: Pharma commercial analytics — Architecture / STTM Governance Lead simulation
+**Dataset**: 3 real sources — Alpha: Kaggle `milanzdravkovic/pharma-sales-data`; Beta: openFDA NDC
+  directory bulk zip (`https://api.fda.gov/download.json`); Gamma: Kaggle
+  `jessicali9530/kuc-hackathon-winter-2018`
+**Problem**: Reconcile three independently-modeled pharma datasets (sales, NDC/ATC drug directory,
+  drug reviews) into one governed star + OBT data mart with full column-level lineage, simulating a
+  Lead consolidating three teams' inconsistent submissions
+**Modelling**: Hybrid — Kimball star (system of record) + OBT (derived BI serving), ADR-001
 **Purpose**: Data Engineering portfolio practice
 
 ## Current Status
@@ -238,7 +242,7 @@ amended); never becomes the governed model (DuckDB+S3 stays sole system of recor
 - [ ] DPE confirm cloud readiness
 
 ## Cikgu Score
-Current: <N>/100
+Current: 100/100 (no hints spent — owner hasn't started Track B's hands-on L1 build yet)
 Threshold breaks: 60 (force docs read), 40 (remedial), 0 (pair-prog with Senior DE)
 
 ## What NOT To Commit

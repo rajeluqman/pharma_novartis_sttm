@@ -1,20 +1,53 @@
 # PROJECT_STATUS.md
-**Last updated**: 2026-06-20 (header note only — see below; full backfill of the
-troubleshooting-library/ADR-006/ADR-006-A1/ADR-007 sessions still owed, out of scope for this edit)
+**Last updated**: 2026-06-22 (full backfill of the 2026-06-20→2026-06-21 sessions — Track I
+incident-response library, ADR-007 Spark+Delta demonstration track, the `O-AIR-01` gold-publish fix —
+now caught up; previous header's "still owed" backfill is closed out by this edit)
 **Current phase**: Phase 5 — Quality + Docs complete, cabinet-reviewed. **ADR-005 (S3-canonical
 storage pivot) MIGRATED & LIVE on real AWS as of 2026-06-19** (run_id `run-20260619-045115`) —
 S3-canonical storage + DuckDB httpfs compute + Snowflake external-table serving veneer, verified
 end-to-end (dbt 63 PASS/1 WARN/0 ERROR, GE PASS, KPIs identical to baseline). AH/ERD/STTM
-re-published to Confluence reflecting the as-built migrated state. MWAA orchestration still **not**
-stood up — remaining wrap-up only.
+re-published to Confluence reflecting the as-built migrated state. **Repo flipped PRIVATE on
+2026-06-21** (owner-driven). MWAA orchestration still **not** stood up — remaining wrap-up only.
 
-**2026-06-20 — Fasa A CLOSED**: `O-AIR-07` (orchestrated DAG could never complete a run across
-per-task `:memory:` subprocess boundaries) and `P-PMR-07` (`stg_beta__ndc` dedup non-idempotent,
-inflated `dim_drug` 133,654→133,758 on rerun) both fixed in the working tree and independently
+**2026-06-20 — Fasa A CLOSED, now committed**: `O-AIR-07` (orchestrated DAG could never complete a
+run across per-task `:memory:` subprocess boundaries) and `P-PMR-07` (`stg_beta__ndc` dedup
+non-idempotent, inflated `dim_drug` 133,654→133,758 on rerun) both fixed and independently
 re-verified by @senior-data-engineer + ratified by @data-architect against the local MinIO
 `gym-lake` incubator (zero contact with the live AWS bucket) — see `SIGN_OFF_LOG.md` "Fasa A
-closure" entry and `docs/OPS_RUNBOOK.md` Known Gaps. No ADR amendment. Still uncommitted. This was
+closure" entry and `docs/OPS_RUNBOOK.md` Known Gaps. No ADR amendment. Committed `c0ad879`. This was
 ADR-007's (Spark+Delta demonstration track) hard sequencing prerequisite — now unblocked.
+
+**2026-06-21 — `O-AIR-01` CLOSED** (the real gap this status doc's "Next Step" had flagged as
+unaddressed): `pharma_sttm_pipeline.py` now threads one `run_id` through every `dbt(...)` subprocess
+call and splits the old combined `dq_checks()` task into `dbt_test → publish_gold → dq_validate`, so
+each orchestrated run's Gold output is verify-then-copied into `gold/_current/` *before* GE reads it.
+Previously every MWAA/local-runner run silently wrote to the fixed `gold/dev/` prefix that nothing
+downstream — Snowflake veneer or GE — ever read. Committed `e722973`.
+
+**2026-06-19/20 — Track I (Incident-Response Gym, ADR-006/ADR-006-A1) fully built and DA-signed-off**:
+all 8 phases (`cheatsheets/troubleshooting/00_INDEX.md` + `01_triage_blast_radius` →
+`08_postmortem_recovery`), 51 cards total, every phase independently re-verified against the real
+`gym-lake` MinIO incubator by @senior-data-engineer then @data-architect — checklist is both
+structurally complete and mechanism-proven (not just scaffolded). The reps surfaced `O-AIR-07` and
+`P-PMR-07` above, plus the substrate-limit cap on `L-SNO-03` (Snowflake `REFRESH` staleness can't be
+reproduced on MinIO — permanent, accepted, codified in ADR-006-A1). Committed `7d5f0fa`.
+
+**2026-06-20/21 — Track S (ADR-007, Spark+Delta DEMONSTRATION track) fully closed, B1–B9, including
+the one real AWS run**: fenced `local[*]`-only PySpark+Delta reading `gold/_current/` read-only and
+writing to its own staging bucket (`novartis-pharma-sttm-spark-staging`), gated by
+`spark_gym_guard.py` (drill-mode MinIO + new demo-mode real-AWS branch), CI-gated, reconciled
+exact-match against DuckDB on all 5 star models (dim_date 4383, dim_condition 836, dim_drug 133654,
+fact_sales 16848, fact_review 215063). Cabinet-reviewed (DPE → senior-DE → DA) at every gate with zero
+outstanding findings. See `SIGN_OFF_LOG.md` "ADR-007" entries and `docs/ADR/
+ADR-007-spark-delta-demonstration-track.md`. Commits `938ce34`, `320e6ba`, `4ce9a0e`, `edbd568`,
+`cf9810f` — **all pushed to `origin/main`** (verified 2026-06-22, local `main` and `origin/main` are
+identical, nothing unpushed).
+
+**Housekeeping note (2026-06-22)**: a stale local branch `feature/adr-005-p5-mwaa-parse-gate`
+(commit `1728a47`, the SLA-gym L3/L5/L8 self-play work) predates a history rewrite/squash and shares
+no merge-base with `main` — but its file contents are byte-identical to what's already on `main`
+(folded into the squashed initial commit `e9d9102`). No work was lost; the branch is fully superseded
+and safe to delete whenever convenient.
 
 ## Phase Overview
 | Phase | Name | Status |
@@ -115,6 +148,33 @@ ADR-007's (Spark+Delta demonstration track) hard sequencing prerequisite — now
   v1→v2, STTM 98534 v2→v3, space NSL. Supersedes the 2026-06-18 versions, which had gone stale the
   moment the migration went live. See `SIGN_OFF_LOG.md` "AH/ERD/STTM Post-Migration Refresh +
   Re-Sign-off" and "Confluence Re-Publish — AH/ERD/STTM Post-Migration" entries
+- [x] **`README.md` refresh** — corrected all remaining pre-migration storage/compute/serving
+  framing to the as-built S3-canonical + DuckDB-httpfs + Snowflake-external-table-veneer state; KPI
+  and business-question content kept as-is (already honest).
+- [x] **Track B seed — SLA-gym self-play (L3/L5/L8) + `@cikgu` handover** (2026-06-19) —
+  `@senior-data-engineer` self-play solved L3 (`gym_l3_sequential_trap`), L5
+  (`gym_l5_full_reload_trap`), L8 (`gym_l8_sensor_hang_trap`) as worked-example answer keys (all
+  DagBag-parse clean); `docs/sla/SABOTAGE_LOG.md` + `docs/sla/SLA_ANALYSIS.md` populated;
+  `learning/CURRICULUM.md` marks L3/L5/L8 as answer keys to re-derive, not skip to.
+  `LEARNING_LOG.md` "HANDOVER TO CIKGU" entry closes the build→learn handover, score 100/100 (no
+  hints spent). Owner's own L1 hands-on build is the one piece still open — see In Progress.
+- [x] **`O-AIR-01` fixed** (2026-06-21) — `pharma_sttm_pipeline.py` now threads a shared `run_id`
+  through every dbt subprocess call and publishes Gold to `gold/_current/` via
+  verify-then-copy before GE validation runs, closing the gap where orchestrated runs silently
+  wrote to an unread `gold/dev/` prefix. Committed `e722973`.
+- [x] **Track I — Incident-Response Gym (ADR-006/ADR-006-A1) — all 8 phases DRILL-READY, 51
+  cards** (2026-06-19/20) — `cheatsheets/troubleshooting/00_INDEX.md` through
+  `08_postmortem_recovery.md`; fail-closed `gym_guard.py` incubator (MinIO `gym-lake`, never the
+  live bucket); every phase independently re-verified via a real MinIO pipeline loop by
+  @senior-data-engineer then ratified by @data-architect. Surfaced `O-AIR-07`/`P-PMR-07` (fixed,
+  Fasa A) and the permanent `L-SNO-03` substrate-limit cap (Snowflake `REFRESH` staleness
+  unreproducible on MinIO). Committed `7d5f0fa`.
+- [x] **Track S — ADR-007 Spark+Delta DEMONSTRATION track — B1–B9 fully closed, including the one
+  real AWS run** (2026-06-20/21) — fenced `local[*]`-only PySpark+Delta, reads `gold/_current/`
+  read-only, writes to its own staging bucket (`novartis-pharma-sttm-spark-staging`) behind
+  `spark_gym_guard.py`'s demo-mode branch, CI-gated, real run reconciled exact-match vs DuckDB on
+  all 5 star models. Cabinet-reviewed at every gate (DPE → senior-DE → DA), zero outstanding
+  findings. Commits `938ce34`/`320e6ba`/`4ce9a0e`/`edbd568`/`cf9810f`.
 
 ## Coverage KPIs (DQD, measured 2026-06-18, post-hardening)
 | Metric | Result |
@@ -127,10 +187,17 @@ ADR-007's (Spark+Delta demonstration track) hard sequencing prerequisite — now
 | fact_review condition_sk resolution | 98.9% (212,698/215,063) — target ≥90% |
 
 ## In Progress 🔄
-- [ ] `README.md` refresh to reflect the live migration (storage/compute/serving framing) — being
-  done in parallel this session.
-- [ ] Track B — SLA-gym self-play (`learning/CURRICULUM.md` L1→L10) — not yet started.
-- [ ] `@cikgu` handover / scoring pass — not yet started.
+- [ ] **Owner's own Track B hands-on build** — `@senior-data-engineer` self-play already solved
+  **L3/L5/L8** as worked examples (answer keys, not to be skipped-to) and `@cikgu` handed over
+  (`LEARNING_LOG.md`, 100/100, no hints spent). The owner has **not yet** built **L1**
+  (`hello_pharma`) themselves — ticket waiting at `learning/diy/TICKET_l1_hello_pharma.md`. This is
+  an owner-driven learning exercise (WHY-before-HOW, hints cost score) — not something to auto-build
+  on the owner's behalf.
+- [ ] MWAA stand-up — still not provisioned; owner-gated cloud spike (~$3–5), needs explicit
+  confirmation before any AWS create.
+- [ ] Optional: extend the ADR-007 Spark demo with an actual join/aggregation job — flagged in
+  `spark/README.md` as not-yet-exercised; not required, just the lowest-effort next increment if the
+  owner wants more Track S depth.
 
 ## Resolved / Superseded This Session (2026-06-19)
 - [x] ✅ **ADR-005 S3-canonical migration — DONE & LIVE** (was "sign-off closed, migration not
@@ -152,30 +219,31 @@ ADR-007's (Spark+Delta demonstration track) hard sequencing prerequisite — now
   Snowflake from that earlier attempt remain untouched, per owner decision — see Known Issues.
 
 ## Next Step When Resuming
-1. **README.md refresh (TOP item, in progress in parallel)** — correct the remaining pre-migration
-   framing (storage/compute/serving sections) to the as-built S3-canonical + DuckDB-httpfs +
-   Snowflake-external-table-veneer state. Keep all honest KPI/business-question content as-is.
-2. **Track B — SLA-gym self-play** (`learning/CURRICULUM.md` L1→L10, `SLA_GYM_PROMPT.md`) — next
-   after the README refresh lands. Not yet started.
-3. **`@cikgu` handover** — scoring pass / interview-readiness review, after Track B. Not yet started.
-4. ✅ DONE 2026-06-19: ADR-005 S3-canonical migration — went LIVE on real AWS end-to-end. ✅ DONE
-   2026-06-19: AH/ERD/STTM re-published to Confluence reflecting the migrated state (AH 131460 v3,
-   ERD 98553 v2, STTM 98534 v3). Nothing left to publish or migrate on this front.
-5. ✅ DONE 2026-06-19 (ADR-005 P5 parse gate CLOSED): Airflow pinned to MWAA-supported 2.10.3 in the
-   separate `requirements/requirements-mwaa.txt`, and `pharma_sttm_pipeline.py` parse-tested CLEAN
-   (zero import errors) via `aws-mwaa-local-runner`. Reproduce on demand: `bash scripts/parse_test_mwaa.sh`
-   ($0, local-only). This is the parse gate only — MWAA itself is still NOT stood up.
-6. **MWAA stand-up remains open and owner-gated** — when/if pursued, budget a short ~$3–5
+1. **Owner's own Track B hands-on build (TOP item, owner-driven)** — build **L1** (`hello_pharma`)
+   per `learning/diy/TICKET_l1_hello_pharma.md`, guided by `@cikgu` (WHY-before-HOW, hints cost
+   score). L3/L5/L8 worked examples already exist as answer keys to re-derive, not skip to — don't
+   open `gym_l8_*` before earning it. This is the one genuinely open Track B item; everything else
+   (seeding, handover) is done.
+2. **MWAA stand-up remains open and owner-gated** — when/if pursued, budget a short ~$3–5
    spike-and-teardown window (see `COST_LOG.md`); no cloud provisioning without explicit owner
    confirmation first.
-7. `dbt/seeds/atc_pharmclass_crosswalk.csv` only covers 8 ATC categories — if @business-analyst
+3. **Optional — extend ADR-007 Spark demo with a real join/aggregation job** — `spark/README.md`
+   already discloses this as not-yet-exercised; lowest-effort next increment for Track S depth if
+   the owner wants it.
+4. **Housekeeping** — delete the stale `feature/adr-005-p5-mwaa-parse-gate` branch (orphaned by a
+   history rewrite; content already folded into `main`'s squashed initial commit, nothing to lose).
+5. `dbt/seeds/atc_pharmclass_crosswalk.csv` only covers 8 ATC categories — if @business-analyst
    wants higher Beta-side seed coverage (a separate number from match-quality, see DQD.md), that
    seed is the lever (more rows = more match surface).
-8. **Process note, reaffirmed this phase**: convening the cabinet *before* build-affecting decisions
-   worked well this session (DPE reviewed the DAG wiring and gave a real ADR-005 verdict rather than
-   rubber-stamping pre-drafted conditions — see `JOURNEY_LOG.md` [010]; @data-architect's ADR-005
-   build-decisions ruling and the post-migration re-sign-off followed the same pattern) — keep doing
-   this for any remaining work, including the eventual MWAA stand-up.
+6. ✅ ALL DONE — ADR-005 migration + Confluence re-publish (2026-06-19); ADR-005 P5 parse gate
+   (2026-06-19); README refresh, Track B seeding, `@cikgu` handover (2026-06-19); `O-AIR-01` Gold
+   publish fix (2026-06-21); Track I incident-response library, all 8 phases/51 cards (2026-06-19/20);
+   Track S ADR-007 Spark+Delta demonstration track B1–B9 incl. the one real AWS run (2026-06-20/21).
+   Nothing left to publish, migrate, or close out on any of these fronts.
+7. **Process note, reaffirmed every phase since**: convening the cabinet *before* build-affecting
+   decisions keeps paying off (DPE/senior-DE/DA each independently re-derived findings rather than
+   rubber-stamping, across ADR-005, Track I, and Track S) — keep doing this for any remaining work,
+   including the eventual MWAA stand-up.
 
 ## Known Issues / Risks
 | Issue | Severity | Notes |
@@ -221,4 +289,5 @@ See `COST_LOG.md` for the full post-migration FinOps writeup (steady-state S3 li
 region-lock egress protection, retired "$3–5 short-window teardown" premise for the whole stack).
 
 ## Cikgu Score
-Current: —/100 (Phase 4 build + cabinet remediation complete; not yet scored)
+Current: 100/100 (no hints spent — owner hasn't started Track B's hands-on L1 build yet; see
+`LEARNING_LOG.md` "HANDOVER TO CIKGU")

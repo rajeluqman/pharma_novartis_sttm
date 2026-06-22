@@ -1,8 +1,8 @@
-# DAG Ladder — Curriculum Map (USER builds these)  [TEMPLATE]
+# DAG Ladder — Curriculum Map (USER builds these)
 
-> Copy to `learning/CURRICULUM.md` in a project. Domain-agnostic: swap the dataset, the
-> ladder stays the same. The USER builds each DAG; @cikgu teaches the concept first
-> (WHY before HOW); @bottleneck-saboteur injects a flaw once the DAG works.
+> Localized for this project from the domain-agnostic gym template (dataset = pharma). The USER
+> builds each DAG; @cikgu teaches the concept first (WHY before HOW); @bottleneck-saboteur injects
+> a flaw once the DAG works.
 >
 > Mark a level DONE only after: (a) you built it, (b) you solved its sabotage, (c) you
 > logged before/after runtime in `docs/sla/SLA_ANALYSIS.md`.
@@ -22,7 +22,7 @@
 
 | Lvl | DAG you build | New concept | Sabotage you'll face | Skill sharpened |
 |-----|---------------|-------------|----------------------|-----------------|
-| **L1** | `hello_<domain>` — 1 task, print row count of raw file | DAG = graph; task; schedule; `start_date`; `catchup` | — (free; learn basics) | Python, Airflow |
+| **L1** | `hello_pharma` — 1 task, print row count of raw file | DAG = graph; task; schedule; `start_date`; `catchup` | — (free; learn basics) | Python, Airflow |
 | **L2** | `ingest_raw` — raw file → Bronze (1 task) | Operators; idempotent load | S6 schedule mismatch | Python, idempotency |
 | **L3** | `ingest_then_count` — 2 tasks, `a >> b` | Task dependency; upstream/downstream | S1 sequential trap | Airflow, critical path |
 | **L4** | `enrich` — Bronze → Silver (clean+conform) | Layer boundary; branching; XCom | S2 full-refresh vs incremental | SQL/Python, layering |

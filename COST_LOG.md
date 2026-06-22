@@ -1,6 +1,7 @@
 # COST_LOG.md
 **Owner**: @finops-agent
-**Last updated**: 2026-06-19 — post ADR-005 S3-canonical migration (LIVE on real AWS)
+**Last updated**: 2026-06-22 — backfilled ADR-007 Track S (Spark+Delta demonstration) staging-bucket
+                  line item, missed when it was provisioned 2026-06-21
                   + LLM token-burn monitor (parallel-session watch) added below
 
 Update every phase.
@@ -73,6 +74,7 @@ That premise is **retired** as of the ADR-005 migration going live 2026-06-19. T
 | 5 | AWS S3 | ~$0 (within Free Tier at this volume) | Bucket created, versioning + lifecycle + region-lock guardrails; full pipeline run landing→bronze→silver→gold parquet via DuckDB httpfs |
 | 5 | Snowflake | ~$0 (a few cents) | `STORAGE INTEGRATION` + new scoped `snowflake_gold_reader` role + `gold_stage` + 2 external tables (`obt_sales_wide_ext` 16,848 rows, `obt_review_wide_ext` 215,063 rows) reading S3 Gold directly — XSMALL warehouse, auto-suspend, trial credits cover this trivially |
 | 5 | MWAA | $0 | Not stood up — orchestration still on local `aws-mwaa-local-runner` |
+| Track S (ADR-007) | AWS S3 | ~$0 (within Free Tier) | `scripts/provision_s3_staging.sh` created `novartis-pharma-sttm-spark-staging` (`ap-southeast-1`, versioned, 30d lifecycle + 7d short-TTL on `delta/`, region-locked) 2026-06-21; one real `local[*]` Spark+Delta run wrote 5 small Delta tables (dim_date/dim_condition/dim_drug/fact_sales/fact_review, same row counts as the governed star) — negligible storage, zero compute cost (no EMR/Glue/Databricks, ADR-007 B2) |
 
 ## Current Status (as of 2026-06-19, post-migration)
 - **Total spent**: effectively **$0** in real dollars — all usage this session falls inside AWS Free
@@ -88,6 +90,10 @@ That premise is **retired** as of the ADR-005 migration going live 2026-06-19. T
   - **Snowflake external-table reads** — trivial trial-credit burn (XSMALL, auto-suspend); no
     dbt-written tables in Snowflake anymore under ADR-005 (read-only veneer over S3 Gold only).
   - **MWAA** — still $0; remains a short-window spike-and-teardown item if/when it is ever stood up.
+  - **Spark staging bucket (`novartis-pharma-sttm-spark-staging`, ADR-007)** — same Free Tier / <$1
+    profile as the main lake bucket; holds only the small Delta output of the one demonstration run.
+    Compute is `local[*]` PySpark (this Codespace), never managed/paid (Glue/EMR/Databricks stay
+    rejected per ADR-005, reaffirmed by ADR-007 B2) — $0 compute, near-$0 storage.
 - **Days remaining (Snowflake trial pace)**: effectively unconstrained at this burn rate — trial
   credit consumption is negligible (cents, not dollars) per session.
 
